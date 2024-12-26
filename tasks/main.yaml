@@ -1,0 +1,34 @@
+---
+- name: Install Nginx
+  apt:
+    name: nginx
+    state: present
+
+- name: Create Nginx configuration directory
+  file:
+    path: /etc/nginx/sites-available
+    state: directory
+    mode: '0755'
+
+- name: Remove default nginx configuration
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+
+- name: Create Nginx configuration files for each host
+  template:
+    src: nginx_proxy.conf.j2
+    dest: "/etc/nginx/sites-available/{{ item.host }}.conf"
+  with_items: "{{ nginx_proxy_hosts }}"
+
+- name: Enable the Nginx configuration
+  file:
+    src: "/etc/nginx/sites-available/{{ item.host }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ item.host }}.conf"
+    state: link
+  with_items: "{{ nginx_proxy_hosts }}"
+
+- name: Restart Nginx
+  service:
+    name: nginx
+    state: restarted

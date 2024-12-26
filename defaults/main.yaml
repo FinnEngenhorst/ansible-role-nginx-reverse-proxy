@@ -1,0 +1,15 @@
+nginx_proxy_hosts:
+  - host: "example.com"
+    listen_port: 80
+    server_names: ["example.com", "www.example.com"]
+    proxy_pass: "http://backend1:8080"
+  - host: "api.example.com"
+    listen_port: 80
+    server_names: ["api.example.com"]
+    proxy_pass: "http://backend2:9000"
+  - host: "another.example.net"
+    listen_port: 443
+    server_names: ["another.example.net"]
+    ssl_cert: "/etc/ssl/certs/another.example.net.crt"
+    ssl_key: "/etc/ssl/private/another.example.net.key"
+    proxy_pass: "http://backend3:3000"
