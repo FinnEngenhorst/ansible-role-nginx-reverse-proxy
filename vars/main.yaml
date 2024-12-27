@@ -1,0 +1,2 @@
+nginx_ssl_cert_path: "/etc/letsencrypt/live"
+nginx_ssl_conf: "ssl_certificate; ssl_certificate_key;"

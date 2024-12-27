@@ -1,15 +1,11 @@
-nginx_proxy_hosts:
-  - host: "example.com"
-    listen_port: 80
-    server_names: ["example.com", "www.example.com"]
-    proxy_pass: "http://backend1:8080"
-  - host: "api.example.com"
-    listen_port: 80
-    server_names: ["api.example.com"]
-    proxy_pass: "http://backend2:9000"
-  - host: "another.example.net"
-    listen_port: 443
-    server_names: ["another.example.net"]
-    ssl_cert: "/etc/ssl/certs/another.example.net.crt"
-    ssl_key: "/etc/ssl/private/another.example.net.key"
-    proxy_pass: "http://backend3:3000"
+nginx_server_name:
+  - "example.com"
+  - "example.org"
+
+nginx_proxy_pass:
+  example.com: "http://localhost:8080"
+  example.org: "http://localhost:9090"
+
+certbot_email: "youremail@example.com"
+certbot_webroot_path: "/var/www/certbot"
+
