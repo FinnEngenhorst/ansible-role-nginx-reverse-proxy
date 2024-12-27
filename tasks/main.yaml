@@ -1,34 +1,81 @@
 ---
-- name: Install Nginx
+- name: Install required packages
   apt:
-    name: nginx
+    name:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
     state: present
+    update_cache: yes
 
-- name: Create Nginx configuration directory
+- name: Check if Let's Encrypt certificate exists
+  stat:
+    path: "/etc/letsencrypt/live/{{ item }}/fullchain.pem"
+  register: letsencrypt_cert
+  with_items: "{{ nginx_server_name }}"
+  loop_control:
+    loop_var: item
+
+- name: Create webroot directory for Certbot
   file:
-    path: /etc/nginx/sites-available
+    path: "{{ certbot_webroot_path }}"
     state: directory
     mode: '0755'
 
-- name: Remove default nginx configuration
+- name: Ensure correct permissions for webroot directory
   file:
-    path: /etc/nginx/sites-enabled/default
-    state: absent
-
-- name: Create Nginx configuration files for each host
+    path: "{{ certbot_webroot_path }}/.well-known/acme-challenge"
+    state: directory
+    recurse: yes
+    mode: '0755'
+    owner: www-data
+    group: www-data
+  
+- name: Create Nginx server block configuration for reverse proxy
   template:
-    src: nginx_proxy.conf.j2
-    dest: "/etc/nginx/sites-available/{{ item.host }}.conf"
-  with_items: "{{ nginx_proxy_hosts }}"
+    src: nginx.conf.j2
+    dest: "/etc/nginx/sites-available/{{ item }}"
+  when: letsencrypt_cert.results[0].stat.exists == False
+  with_items: "{{ nginx_server_name }}"
+  loop_control:
+    loop_var: item
 
-- name: Enable the Nginx configuration
+- name: Create a symlink to enable site in Nginx
   file:
-    src: "/etc/nginx/sites-available/{{ item.host }}.conf"
-    dest: "/etc/nginx/sites-enabled/{{ item.host }}.conf"
+    src: "/etc/nginx/sites-available/{{ item }}"
+    dest: "/etc/nginx/sites-enabled/{{ item }}"
     state: link
-  with_items: "{{ nginx_proxy_hosts }}"
+  with_items: "{{ nginx_server_name }}"
+  loop_control:
+    loop_var: item
 
-- name: Restart Nginx
+- name: Reload Nginx
   service:
     name: nginx
-    state: restarted
+    state: reloaded
+
+- name: Obtain SSL certificates using Certbot
+  command: >
+    certbot certonly --webroot -w {{ certbot_webroot_path }} -d {{ item }} --email {{ certbot_email }} --agree-tos --non-interactive
+  with_items: "{{ nginx_server_name }}"
+  loop_control:
+    loop_var: item
+
+- name: Configure SSL for Nginx
+  template:
+    src: nginx-ssl.conf.j2
+    dest: "/etc/nginx/sites-available/{{ item }}"
+  with_items: "{{ nginx_server_name }}"
+  loop_control:
+    loop_var: item
+  
+- name: Reload Nginx
+  service:
+    name: nginx
+    state: reloaded
+
+- name: Ensure Nginx is running
+  service:
+    name: nginx
+    state: started
+    enabled: yes
